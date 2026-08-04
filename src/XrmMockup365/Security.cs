@@ -498,6 +498,9 @@ namespace DG.Tools.XrmMockup
             // if max privelege depth is global, then caller can access all entities
             if (maxRole == PrivilegeDepth.Global) return true;
 
+            // RecordFilter privilege depth is not properly handled, and are instead handled as Global
+            if (maxRole == PrivilegeDepth.RecordFilter) return true;
+
             // sets owner of entity to caller if there is no owner already
             if (access == AccessRights.CreateAccess && !entity.Attributes.ContainsKey("ownerid"))
             {

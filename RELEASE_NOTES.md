@@ -1,3 +1,6 @@
+### 1.18.9 - 4 August 2026
+* Fix: Handle PrivilegeDepth.RecordFilter like PrivilegeDepth.Global instead of throwing exception
+
 ### 1.18.8 - 14 July 2026
 * Fix: Align plugin Target with Dataverse for system-managed fields (#344)
 

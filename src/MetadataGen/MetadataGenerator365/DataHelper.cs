@@ -548,6 +548,7 @@ namespace DG.Tools.XrmMockup.Metadata
                 case 2: return PrivilegeDepth.Local;
                 case 4: return PrivilegeDepth.Deep;
                 case 8: return PrivilegeDepth.Global;
+                case 16: return PrivilegeDepth.RecordFilter;
                 default:
                     throw new NotImplementedException($"Unknown privilege depth mask: {privilegeDepth}");
             }
