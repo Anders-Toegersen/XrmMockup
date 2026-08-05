@@ -361,7 +361,8 @@ public class SecurityRoleReaderTests : ReaderTestBase
                         privilege.Value.PrivilegeDepth == PrivilegeDepth.Basic ||
                         privilege.Value.PrivilegeDepth == PrivilegeDepth.Local ||
                         privilege.Value.PrivilegeDepth == PrivilegeDepth.Deep ||
-                        privilege.Value.PrivilegeDepth == PrivilegeDepth.Global,
+                        privilege.Value.PrivilegeDepth == PrivilegeDepth.Global ||
+                        privilege.Value.PrivilegeDepth == PrivilegeDepth.RecordFilter,
                         $"Role '{role.Name}' has invalid privilege depth: {privilege.Value.PrivilegeDepth}");
                 }
             }

@@ -193,6 +193,7 @@ internal sealed class SecurityRoleReader(
             2 => PrivilegeDepth.Local,
             4 => PrivilegeDepth.Deep,
             8 => PrivilegeDepth.Global,
+            16 => PrivilegeDepth.RecordFilter,
             _ => throw new NotImplementedException($"Unknown privilege depth mask: {privilegeDepth}")
         };
     }
