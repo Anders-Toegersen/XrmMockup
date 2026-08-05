@@ -1,4 +1,4 @@
-### 1.18.9 - 4 August 2026
+### 1.19.0 - 5 August 2026
 * Fix: Handle PrivilegeDepth.RecordFilter like PrivilegeDepth.Global instead of throwing exception
 
 ### 1.18.8 - 14 July 2026
