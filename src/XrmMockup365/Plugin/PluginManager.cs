@@ -322,9 +322,10 @@ namespace DG.Tools.XrmMockup
         }
 
         public void TriggerSync(string operation, ExecutionStage stage,
-                object entity, Entity preImage, Entity postImage, PluginContext pluginContext, Func<PluginTrigger, bool> executionOrderFilter)
+                object entity, Entity preImage, Entity postImage, PluginContext pluginContext, Func<PluginTrigger, bool> executionOrderFilter,
+                ISet<string> systemInjectedAttributes = null)
         {
-            TriggerSyncInternal(operation, stage, entity, preImage, postImage, pluginContext, executionOrderFilter);
+            TriggerSyncInternal(operation, stage, entity, preImage, postImage, pluginContext, executionOrderFilter, systemInjectedAttributes);
 
             // Check if this is a Single -> Multiple request
             var isKnownOp = Enum.TryParse<EventOperationEnum>(operation, out var knownOp);
@@ -361,7 +362,7 @@ namespace DG.Tools.XrmMockup
                 };
 
 
-                TriggerSyncInternal(multipleOperation.ToString(), stage, entityCollection, null, null, multiplePluginContext, executionOrderFilter);
+                TriggerSyncInternal(multipleOperation.ToString(), stage, entityCollection, null, null, multiplePluginContext, executionOrderFilter, systemInjectedAttributes);
             }
 
             // Check if this is a Multiple -> Single request
@@ -407,13 +408,14 @@ namespace DG.Tools.XrmMockup
                     var entityPostImage = pluginContext.PostEntityImagesCollection.Length > i
                         && pluginContext.PostEntityImagesCollection[i].TryGetValue("PostImage", out var post) ? post : postImage;
 
-                    TriggerSyncInternal(singleOperation.ToString(), stage, targetEntity, entityPreImage, entityPostImage, singlePluginContext, executionOrderFilter);
+                    TriggerSyncInternal(singleOperation.ToString(), stage, targetEntity, entityPreImage, entityPostImage, singlePluginContext, executionOrderFilter, systemInjectedAttributes);
                 }
             }
         }
 
         private void TriggerSyncInternal(EventOperation operation, ExecutionStage stage,
-                object entity, Entity preImage, Entity postImage, PluginContext pluginContext, Func<PluginTrigger, bool> executionOrderFilter)
+                object entity, Entity preImage, Entity postImage, PluginContext pluginContext, Func<PluginTrigger, bool> executionOrderFilter,
+                ISet<string> systemInjectedAttributes = null)
         {
             if (!disableRegisteredPlugins && registeredPlugins.TryGetValue(operation, out var operationPlugins) && operationPlugins.TryGetValue(stage, out var stagePlugins))
                 stagePlugins
@@ -421,7 +423,7 @@ namespace DG.Tools.XrmMockup
                     .Where(executionOrderFilter)
                     .OrderBy(p => p.GetExecutionOrder())
                     .ToList()
-                    .ForEach(p => p.ExecuteIfMatch(entity, preImage, postImage, pluginContext, _core));
+                    .ForEach(p => p.ExecuteIfMatch(entity, preImage, postImage, pluginContext, _core, systemInjectedAttributes: systemInjectedAttributes));
 
             if (temporaryPlugins.TryGetValue(operation, out var tempOperationPlugins) && tempOperationPlugins.TryGetValue(stage, out var tempStagePlugins))
                 tempStagePlugins
@@ -429,17 +431,18 @@ namespace DG.Tools.XrmMockup
                     .Where(executionOrderFilter)
                     .OrderBy(p => p.GetExecutionOrder())
                     .ToList()
-                    .ForEach(p => p.ExecuteIfMatch(entity, preImage, postImage, pluginContext, _core));
+                    .ForEach(p => p.ExecuteIfMatch(entity, preImage, postImage, pluginContext, _core, systemInjectedAttributes: systemInjectedAttributes));
         }
 
         public void StageAsync(EventOperation operation, ExecutionStage stage,
-                object entity, Entity preImage, Entity postImage, PluginContext pluginContext)
+                object entity, Entity preImage, Entity postImage, PluginContext pluginContext,
+                ISet<string> systemInjectedAttributes = null)
         {
             if (!disableRegisteredPlugins && registeredPlugins.TryGetValue(operation, out var operationPlugins) && operationPlugins.TryGetValue(stage, out var stagePlugins))
                 stagePlugins
                     .Where(p => p.GetExecutionMode() == ExecutionMode.Asynchronous)
                     .OrderBy(p => p.GetExecutionOrder())
-                    .Select(p => p.ToPluginExecution(entity, preImage, postImage, pluginContext, _core))
+                    .Select(p => p.ToPluginExecution(entity, preImage, postImage, pluginContext, _core, systemInjectedAttributes))
                     .ToList()
                     .ForEach(pendingAsyncPlugins.Enqueue);
 
@@ -447,7 +450,7 @@ namespace DG.Tools.XrmMockup
                 tempStagePlugins
                     .Where(p => p.GetExecutionMode() == ExecutionMode.Asynchronous)
                     .OrderBy(p => p.GetExecutionOrder())
-                    .Select(p => p.ToPluginExecution(entity, preImage, postImage, pluginContext, _core))
+                    .Select(p => p.ToPluginExecution(entity, preImage, postImage, pluginContext, _core, systemInjectedAttributes))
                     .ToList()
                     .ForEach(pendingAsyncPlugins.Enqueue);
         }
@@ -461,7 +464,8 @@ namespace DG.Tools.XrmMockup
         }
 
         public void TriggerSystem(EventOperation operation, ExecutionStage stage,
-                object entity, Entity preImage, Entity postImage, PluginContext pluginContext)
+                object entity, Entity preImage, Entity postImage, PluginContext pluginContext,
+                ISet<string> systemInjectedAttributes = null)
         {
             if (!registeredSystemPlugins.TryGetValue(operation, out var stagePlugins))
             {
@@ -475,7 +479,7 @@ namespace DG.Tools.XrmMockup
 
             // System plugins are XrmMockup's own internal simulation, not user-registered steps,
             // so they are excluded from the grouped plugin trace log.
-            plugins.ForEach(p => p.ExecuteIfMatch(entity, preImage, postImage, pluginContext, _core, recordTrace: false));
+            plugins.ForEach(p => p.ExecuteIfMatch(entity, preImage, postImage, pluginContext, _core, recordTrace: false, systemInjectedAttributes: systemInjectedAttributes));
         }
 
         private string GeneratePluginCacheKey(IEnumerable<Type> basePluginTypes, IEnumerable<MetaPlugin> plugins)

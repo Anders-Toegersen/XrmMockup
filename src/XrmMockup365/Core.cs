@@ -785,14 +785,20 @@ namespace DG.Tools.XrmMockup
             return Utility.GetBusinessUnit(db, owner);
         }
 
-        public void CopySystemAttributes(Entity postImage, Entity target)
+        public ISet<string> CopySystemAttributes(Entity postImage, Entity target)
         {
-            if (target == null) return;
+            var injected = new HashSet<string>();
+            if (target == null) return injected;
 
             foreach (var systemAttributeName in systemAttributeNames)
             {
                 if (postImage.Contains(systemAttributeName))
                 {
+                    // Only attributes this copy *adds* are reported. One the caller (or a
+                    // pre-operation plugin) already put in the Target is a genuine part of the
+                    // update and must keep counting towards plugin/workflow attribute filters.
+                    var wasAbsent = !target.Contains(systemAttributeName);
+
                     if (postImage[systemAttributeName] is EntityReference reference)
                     {
                         target[systemAttributeName] = new EntityReference(reference.LogicalName, reference.Id);
@@ -805,8 +811,16 @@ namespace DG.Tools.XrmMockup
                     {
                         target[systemAttributeName] = new OptionSetValue(optionSet.Value);
                     }
+                    else
+                    {
+                        continue;
+                    }
+
+                    if (wasAbsent) injected.Add(systemAttributeName);
                 }
             }
+
+            return injected;
         }
 
         public void HandleInternalPreOperations(OrganizationRequest request, EntityReference userRef)

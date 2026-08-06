@@ -1,5 +1,8 @@
+### 1.19.1 - 6 August 2026
+* Fix: System-managed attributes copied onto Target for post-operation visibility no longer satisfy Update filtering attributes (#346)
+
 ### 1.19.0 - 5 August 2026
-* Fix: Handle PrivilegeDepth.RecordFilter like PrivilegeDepth.Global instead of throwing exception
+* Fix: Handle PrivilegeDepth.RecordFilter like PrivilegeDepth.Global instead of throwing exception (#345)
 
 ### 1.18.8 - 14 July 2026
 * Fix: Align plugin Target with Dataverse for system-managed fields (#344)

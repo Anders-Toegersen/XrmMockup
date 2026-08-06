@@ -282,32 +282,37 @@ namespace DG.Tools.XrmMockup
 
             ctx.SyncPostImage = core.TryRetrieve(ctx.PrimaryRef);
             if (ctx.SyncPostImage != null)
-                core.CopySystemAttributes(ctx.SyncPostImage, ctx.EntityInfo.Item1 as Entity);
+                ctx.SystemInjectedAttributes =
+                    core.CopySystemAttributes(ctx.SyncPostImage, ctx.EntityInfo.Item1 as Entity);
 
             // Sync post-operation: system first, then user plugins ordered by ExecutionOrder, interleaved with workflows
             pluginManager.TriggerSystem(ctx.RequestMessage, ExecutionStage.PostOperation,
-                ctx.EntityInfo.Item1, ctx.PreImage, ctx.SyncPostImage, ctx.PluginContext);
+                ctx.EntityInfo.Item1, ctx.PreImage, ctx.SyncPostImage, ctx.PluginContext,
+                ctx.SystemInjectedAttributes);
 
             pluginManager.TriggerSync(ctx.RequestMessage, ExecutionStage.PostOperation,
                 ctx.EntityInfo.Item1, ctx.PreImage, ctx.SyncPostImage, ctx.PluginContext,
-                p => p.GetExecutionOrder() == 0);
+                p => p.GetExecutionOrder() == 0, ctx.SystemInjectedAttributes);
 
             if (ctx.Settings.TriggerWorkflows)
                 workflowManager.TriggerSync(ctx.RequestMessage, ExecutionStage.PostOperation,
-                    ctx.EntityInfo.Item1, ctx.PreImage, ctx.SyncPostImage, ctx.PluginContext);
+                    ctx.EntityInfo.Item1, ctx.PreImage, ctx.SyncPostImage, ctx.PluginContext,
+                    ctx.SystemInjectedAttributes);
 
             pluginManager.TriggerSync(ctx.RequestMessage, ExecutionStage.PostOperation,
                 ctx.EntityInfo.Item1, ctx.PreImage, ctx.SyncPostImage, ctx.PluginContext,
-                p => p.GetExecutionOrder() != 0);
+                p => p.GetExecutionOrder() != 0, ctx.SystemInjectedAttributes);
 
             // Stage async work — re-fetch post-image so async jobs see the final committed state
             ctx.AsyncPostImage = core.TryRetrieve(ctx.PrimaryRef);
             pluginManager.StageAsync(ctx.RequestMessage, ExecutionStage.PostOperation,
-                ctx.EntityInfo.Item1, ctx.PreImage, ctx.AsyncPostImage, ctx.PluginContext);
+                ctx.EntityInfo.Item1, ctx.PreImage, ctx.AsyncPostImage, ctx.PluginContext,
+                ctx.SystemInjectedAttributes);
 
             if (ctx.Settings.TriggerWorkflows)
                 workflowManager.StageAsync(ctx.RequestMessage, ExecutionStage.PostOperation,
-                    ctx.EntityInfo.Item1, ctx.PreImage, ctx.AsyncPostImage, ctx.PluginContext);
+                    ctx.EntityInfo.Item1, ctx.PreImage, ctx.AsyncPostImage, ctx.PluginContext,
+                    ctx.SystemInjectedAttributes);
 
             // Async jobs only fire at the top-level call, not from within a plugin
             if (ctx.ParentPluginContext == null)

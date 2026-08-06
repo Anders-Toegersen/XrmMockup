@@ -63,7 +63,8 @@ namespace DG.Tools.XrmMockup
         }
 
         // Saves "execution" for Async plugins to be executed after sync plugins.
-        public PluginExecutionProvider ToPluginExecution(object entityObject, Entity preImage, Entity postImage, PluginContext pluginContext, ICoreOperations core)
+        public PluginExecutionProvider ToPluginExecution(object entityObject, Entity preImage, Entity postImage, PluginContext pluginContext, ICoreOperations core,
+            ISet<string> systemInjectedAttributes = null)
         {
             var entity = entityObject as Entity;
             var entityRef = entityObject as EntityReference;
@@ -71,7 +72,7 @@ namespace DG.Tools.XrmMockup
             var guid = (entity != null) ? entity.Id : entityRef.Id;
             var logicalName = (entity != null) ? entity.LogicalName : entityRef.LogicalName;
 
-            if (VerifyPluginTrigger(entity, logicalName, guid, preImage, postImage, pluginContext))
+            if (VerifyPluginTrigger(entity, logicalName, guid, preImage, postImage, pluginContext, systemInjectedAttributes))
             {
                 // Create the plugin context
                 var thisPluginContext = CreatePluginContext(pluginContext, guid, logicalName, preImage, postImage);
@@ -86,7 +87,8 @@ namespace DG.Tools.XrmMockup
             return null;
         }
 
-        public void ExecuteIfMatch(object entityObject, Entity preImage, Entity postImage, PluginContext pluginContext, ICoreOperations core, bool recordTrace = true)
+        public void ExecuteIfMatch(object entityObject, Entity preImage, Entity postImage, PluginContext pluginContext, ICoreOperations core, bool recordTrace = true,
+            ISet<string> systemInjectedAttributes = null)
         {
             // Check if it is supposed to execute. Returns preemptively, if it should not.
             var entity = entityObject as Entity;
@@ -106,7 +108,7 @@ namespace DG.Tools.XrmMockup
                 ? entityRef.LogicalName
                 : entityCollection.EntityName;
 
-            if (VerifyPluginTrigger(entity, logicalName, guid, preImage, postImage, pluginContext))
+            if (VerifyPluginTrigger(entity, logicalName, guid, preImage, postImage, pluginContext, systemInjectedAttributes))
             {
                 var thisPluginContext = CreatePluginContext(pluginContext, guid, logicalName, preImage, postImage);
 
@@ -173,7 +175,7 @@ namespace DG.Tools.XrmMockup
             return entity;
         }
 
-        private bool FilteredAttributesMatches(Entity entity)
+        private bool FilteredAttributesMatches(Entity entity, ISet<string> systemInjectedAttributes)
         {
             if (!Operation.Matches(EventOperation.Update) || Attributes.Count == 0)
             {
@@ -183,6 +185,15 @@ namespace DG.Tools.XrmMockup
             bool foundAttr = false;
             foreach (var attr in entity.Attributes)
             {
+                // System-managed attributes that XrmMockup copied onto the Target for post-operation
+                // visibility were not part of the update the caller asked for, so they must not
+                // satisfy the filter — otherwise a step filtered on e.g. statecode would fire on
+                // every update of the table.
+                if (systemInjectedAttributes != null && systemInjectedAttributes.Contains(attr.Key))
+                {
+                    continue;
+                }
+
                 if (Attributes.Contains(attr.Key))
                 {
                     foundAttr = true;
@@ -192,7 +203,8 @@ namespace DG.Tools.XrmMockup
             return foundAttr;
         }
 
-        private bool VerifyPluginTrigger(Entity entity, string logicalName, Guid guid, Entity preImage, Entity postImage, PluginContext pluginContext)
+        private bool VerifyPluginTrigger(Entity entity, string logicalName, Guid guid, Entity preImage, Entity postImage, PluginContext pluginContext,
+            ISet<string> systemInjectedAttributes = null)
         {
             if (EntityName != "" && EntityName != logicalName) return false;
 
@@ -205,7 +217,7 @@ namespace DG.Tools.XrmMockup
             entity = AddPostImageAttributesToEntity(entity, preImage, postImage);
             CheckSpecialRequest();
 
-            if (FilteredAttributesMatches(entity))
+            if (FilteredAttributesMatches(entity, systemInjectedAttributes))
             {
                 return true;
             }
