@@ -30,8 +30,8 @@ namespace DG.Tools.XrmMockup.Internal
         // Pre-context setup
         void HandleInternalPreOperations(OrganizationRequest request, EntityReference userRef);
 
-        // Post-operation image helper
-        void CopySystemAttributes(Entity postImage, Entity target);
+        // Post-operation image helper — returns the attributes it added to the target
+        ISet<string> CopySystemAttributes(Entity postImage, Entity target);
 
         // Request handler list — used by pipeline for security check and pre-op init
         List<RequestHandler> RequestHandlers { get; }

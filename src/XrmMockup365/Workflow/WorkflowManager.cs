@@ -107,9 +107,10 @@ namespace DG.Tools.XrmMockup {
         /// <param name="pluginContext"></param>
         /// <param name="core"></param>
         public void TriggerSync(string operation, ExecutionStage stage,
-                object entity, Entity preImage, Entity postImage, PluginContext pluginContext)
+                object entity, Entity preImage, Entity postImage, PluginContext pluginContext,
+                ISet<string> systemInjectedAttributes = null)
         {
-            var toExecute = synchronousWorkflows.Where(x => ShouldExecute(x, operation, stage, entity, pluginContext)).ToList();
+            var toExecute = synchronousWorkflows.Where(x => ShouldExecute(x, operation, stage, entity, pluginContext, systemInjectedAttributes)).ToList();
             foreach (var workflow in toExecute)
             {
                 Execute(workflow, operation, entity, preImage, postImage, pluginContext);
@@ -133,12 +134,13 @@ namespace DG.Tools.XrmMockup {
         }
 
         public void StageAsync(string operation, ExecutionStage stage,
-                object entity, Entity preImage, Entity postImage, PluginContext pluginContext)
+                object entity, Entity preImage, Entity postImage, PluginContext pluginContext,
+                ISet<string> systemInjectedAttributes = null)
         {
-            var toExecute = asynchronousWorkflows.Where(x => ShouldStage(x, operation, stage, entity, pluginContext)).ToList();
+            var toExecute = asynchronousWorkflows.Where(x => ShouldStage(x, operation, stage, entity, pluginContext, systemInjectedAttributes)).ToList();
             foreach (var workflow in toExecute)
             {
-                Stage(workflow, operation, stage, entity,pluginContext);
+                Stage(workflow, operation, stage, entity, pluginContext, systemInjectedAttributes);
             }
         }
 
@@ -199,7 +201,7 @@ namespace DG.Tools.XrmMockup {
         }
 
         private void Stage(Entity workflow, string operation, ExecutionStage stage,
-            object entityObject, PluginContext pluginContext)
+            object entityObject, PluginContext pluginContext, ISet<string> systemInjectedAttributes)
         {
             if (workflow.LogicalName != "workflow") return;
             var entity = entityObject as Entity;
@@ -217,19 +219,8 @@ namespace DG.Tools.XrmMockup {
             var isDelete = operation.Matches(EventOperation.Delete);
 
             if (!ShouldTriggerOnAction(isCreate, isUpdate, isDelete, workflow)) return;
-            
-            var triggerFields = new HashSet<string>();
-            if (workflow.GetAttributeValue<string>("triggeronupdateattributelist") != null)
-            {
-                foreach (var field in workflow.GetAttributeValue<string>("triggeronupdateattributelist").Split(','))
-                {
-                    triggerFields.Add(field);
-                }
-            }
-            if (isUpdate && (
-                workflow.GetAttributeValue<string>("triggeronupdateattributelist") == null ||
-                workflow.GetAttributeValue<string>("triggeronupdateattributelist") == "" ||
-                !entity.Attributes.Any(a => workflow.GetAttributeValue<string>("triggeronupdateattributelist").Split(',').Any(f => a.Key == f)))) return;
+
+            if (isUpdate && !MatchesTriggerFields(workflow, entity, systemInjectedAttributes)) return;
 
             var thisStage = isCreate ? workflow.GetOptionSetValue<workflow_stage>("createstage") :
                 (isDelete ? workflow.GetOptionSetValue<workflow_stage>("deletestage") : workflow.GetOptionSetValue<workflow_stage>("updatestage"));
@@ -249,7 +240,7 @@ namespace DG.Tools.XrmMockup {
         }
 
         private bool ShouldStage(Entity workflow, string operation, ExecutionStage stage,
-            object entityObject, PluginContext pluginContext)
+            object entityObject, PluginContext pluginContext, ISet<string> systemInjectedAttributes)
         {
             if (workflow.LogicalName != "workflow") return false;
             var entity = entityObject as Entity;
@@ -268,18 +259,7 @@ namespace DG.Tools.XrmMockup {
 
             if (!ShouldTriggerOnAction(isCreate, isUpdate, isDelete, workflow)) return false;
 
-            var triggerFields = new HashSet<string>();
-            if (workflow.GetAttributeValue<string>("triggeronupdateattributelist") != null)
-            {
-                foreach (var field in workflow.GetAttributeValue<string>("triggeronupdateattributelist").Split(','))
-                {
-                    triggerFields.Add(field);
-                }
-            }
-            if (isUpdate && (
-                workflow.GetAttributeValue<string>("triggeronupdateattributelist") == null ||
-                workflow.GetAttributeValue<string>("triggeronupdateattributelist") == "" ||
-                !entity.Attributes.Any(a => workflow.GetAttributeValue<string>("triggeronupdateattributelist").Split(',').Any(f => a.Key == f)))) return false;
+            if (isUpdate && !MatchesTriggerFields(workflow, entity, systemInjectedAttributes)) return false;
 
             var thisStage = isCreate ? workflow.GetOptionSetValue<workflow_stage>("createstage") :
                 (isDelete ? workflow.GetOptionSetValue<workflow_stage>("deletestage") : workflow.GetOptionSetValue<workflow_stage>("updatestage"));
@@ -298,6 +278,23 @@ namespace DG.Tools.XrmMockup {
             return true;
         }
 
+        /// <summary>
+        /// Matches the workflow's triggering attributes against the attributes present in the Target.
+        /// Attributes XrmMockup copied onto the Target for post-operation visibility are skipped —
+        /// they were not part of the update the caller requested, so they must not trigger a workflow
+        /// (a workflow triggering on e.g. statecode would otherwise run on every update of the table).
+        /// </summary>
+        private static bool MatchesTriggerFields(Entity workflow, Entity entity, ISet<string> systemInjectedAttributes)
+        {
+            var triggerList = workflow.GetAttributeValue<string>("triggeronupdateattributelist");
+            if (string.IsNullOrEmpty(triggerList)) return false;
+
+            var triggerFields = new HashSet<string>(triggerList.Split(','));
+            return entity.Attributes.Keys.Any(key =>
+                (systemInjectedAttributes == null || !systemInjectedAttributes.Contains(key))
+                && triggerFields.Contains(key));
+        }
+
         private bool ShouldTriggerOnAction(bool isCreate,bool isUpdate,bool isDelete,Entity workflow)
         {
             if (!isCreate && !isUpdate && !isDelete) return false;
@@ -306,7 +303,8 @@ namespace DG.Tools.XrmMockup {
             return true;
         }
 
-        private bool ShouldExecute(Entity workflow, string operation, ExecutionStage stage, object entityObject, PluginContext pluginContext)
+        private bool ShouldExecute(Entity workflow, string operation, ExecutionStage stage, object entityObject, PluginContext pluginContext,
+            ISet<string> systemInjectedAttributes)
         {
             // Check if it is supposed to execute. Returns preemptively, if it should not.
             if (workflow.LogicalName != "workflow") return false;
@@ -326,18 +324,7 @@ namespace DG.Tools.XrmMockup {
 
             if (!ShouldTriggerOnAction(isCreate, isUpdate, isDelete, workflow)) return false;
 
-            var triggerFields = new HashSet<string>();
-            if (workflow.GetAttributeValue<string>("triggeronupdateattributelist") != null)
-            {
-                foreach (var field in workflow.GetAttributeValue<string>("triggeronupdateattributelist").Split(','))
-                {
-                    triggerFields.Add(field);
-                }
-            }
-            if (isUpdate && (
-                workflow.GetAttributeValue<string>("triggeronupdateattributelist") == null ||
-                workflow.GetAttributeValue<string>("triggeronupdateattributelist") == "" ||
-                !entity.Attributes.Any(a => workflow.GetAttributeValue<string>("triggeronupdateattributelist").Split(',').Any(f => a.Key == f)))) return false;
+            if (isUpdate && !MatchesTriggerFields(workflow, entity, systemInjectedAttributes)) return false;
 
             var thisStage = isCreate ? workflow.GetOptionSetValue<workflow_stage>("createstage") :
                 (isDelete ? workflow.GetOptionSetValue<workflow_stage>("deletestage") : workflow.GetOptionSetValue<workflow_stage>("updatestage"));
@@ -370,15 +357,6 @@ namespace DG.Tools.XrmMockup {
             var isCreate = operation.Matches(EventOperation.Create);
             var isUpdate = operation.Matches(EventOperation.Update);
             var isDelete = operation.Matches(EventOperation.Delete);
-
-            var triggerFields = new HashSet<string>();
-            if (workflow.GetAttributeValue<string>("triggeronupdateattributelist") != null)
-            {
-                foreach (var field in workflow.GetAttributeValue<string>("triggeronupdateattributelist").Split(','))
-                {
-                    triggerFields.Add(field);
-                }
-            }
 
             var thisStage = isCreate ? workflow.GetOptionSetValue<workflow_stage>("createstage") :
                 (isDelete ? workflow.GetOptionSetValue<workflow_stage>("deletestage") : workflow.GetOptionSetValue<workflow_stage>("updatestage"));

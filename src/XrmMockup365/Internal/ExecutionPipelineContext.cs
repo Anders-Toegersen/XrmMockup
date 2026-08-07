@@ -1,5 +1,6 @@
 using Microsoft.Xrm.Sdk;
 using System;
+using System.Collections.Generic;
 
 namespace DG.Tools.XrmMockup.Internal
 {
@@ -27,6 +28,11 @@ namespace DG.Tools.XrmMockup.Internal
         public Entity PreImage { get; set; }       // fetched before PreValidation
         public Entity SyncPostImage { get; set; }  // fetched at start of PostOperation (sync)
         public Entity AsyncPostImage { get; set; } // fetched before async staging
+
+        // System-managed attributes copied onto the Target at the start of PostOperation. They are
+        // visible to post-operation plugins (as in Dataverse) but must not count towards Update
+        // filtering attributes, since the caller never asked for them to change.
+        public ISet<string> SystemInjectedAttributes { get; set; }
 
         // Output — set by the main operation stage
         public OrganizationResponse Response { get; set; }
