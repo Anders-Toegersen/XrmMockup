@@ -11,8 +11,9 @@ namespace DG.Tools.XrmMockup.Online
     /// <summary>
     /// In-process implementation for connecting to a live Dataverse environment.
     /// Used for testing with real data when OnlineEnvironment is configured.
-    /// Uses Azure DefaultAzureCredential for authentication (supports managed identity,
-    /// Visual Studio credentials, Azure CLI, etc.).
+    /// Authentication comes from the DataverseConnection package, which since 1.2.0 defaults to
+    /// InteractiveBrowserCredential — a sign-in prompt, not the ambient DefaultAzureCredential
+    /// chain. Set DataverseCredentialType in configuration to pick azcli or devicecode instead.
     /// </summary>
     internal class OnlineDataService : IOnlineDataService
     {

@@ -12,7 +12,7 @@ namespace DG.XrmMockupTest.Online
     /// <summary>
     /// Unit tests verifying XrmMockup's integration with IOnlineDataService.
     /// Uses mock IOnlineDataService to verify correct behavior without real proxy.
-    /// Only available on net8.0 (DATAVERSE_SERVICE_CLIENT).
+    /// Only available on net10.0 (DATAVERSE_SERVICE_CLIENT).
     /// </summary>
     public class OnlineDataServiceUnitTests : IClassFixture<XrmMockupFixture>
     {

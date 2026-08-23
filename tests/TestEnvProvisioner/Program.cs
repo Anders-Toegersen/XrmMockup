@@ -36,8 +36,10 @@ string? dumpTarget = GetArg(args, "--dump-formula");
 
 // Build configuration the same way the metadata generator does — appsettings.json (from the
 // --config file's folder, or the current directory) plus environment variables. This IConfiguration
-// is registered in DI below, because DataverseConnection's AddDataverse() reads DATAVERSE_URL from
-// IConfiguration, NOT from the environment variable directly.
+// is registered in DI below, because DataverseConnection's AddDataverse() reads DataverseUrl (or the
+// legacy DATAVERSE_URL) from IConfiguration, NOT from the environment variable directly. The same
+// configuration selects the credential: DataverseCredentialType = browser (the default since
+// DataverseConnection 1.2.0), devicecode or azcli.
 var baseDir = Directory.GetCurrentDirectory();
 var jsonFile = "appsettings.json";
 if (!string.IsNullOrEmpty(configPath))

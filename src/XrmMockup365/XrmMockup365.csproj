@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>net462;net8.0</TargetFrameworks>
+    <TargetFrameworks>net462;net10.0</TargetFrameworks>
     <DebugType>portable</DebugType>
     <Title>XrmMockup365</Title>
     <!-- Version set by CI from RELEASE_NOTES.md -->
@@ -50,9 +50,9 @@
     <Content Include="..\..\files\TypeDeclarations.cs" Pack="true" PackagePath="content\net462\Metadata" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\MetadataGen\MetadataGenerator365\bin\$(Configuration)\net462\MetadataGenerator365.exe" Pack="true" PackagePath="content\net8.0\Metadata" />
-    <Content Include="..\MetadataGen\MetadataGenerator365\bin\$(Configuration)\net462\MetadataGenerator365.exe.config" Pack="true" PackagePath="content\net8.0\Metadata" />
-    <Content Include="..\..\files\TypeDeclarations.cs" Pack="true" PackagePath="content\net8.0\Metadata" />
+    <Content Include="..\MetadataGen\MetadataGenerator365\bin\$(Configuration)\net462\MetadataGenerator365.exe" Pack="true" PackagePath="content\net10.0\Metadata" />
+    <Content Include="..\MetadataGen\MetadataGenerator365\bin\$(Configuration)\net462\MetadataGenerator365.exe.config" Pack="true" PackagePath="content\net10.0\Metadata" />
+    <Content Include="..\..\files\TypeDeclarations.cs" Pack="true" PackagePath="content\net10.0\Metadata" />
   </ItemGroup>
   <ItemGroup>
     <!-- Icon is included by Directory.Build.props -->
@@ -68,7 +68,7 @@
   <ItemGroup Condition="'$(TargetFramework)' != 'net462'">
     <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.2.10" />
     <PackageReference Include="UiPath.Workflow" Version="6.0.3" />
-    <PackageReference Include="DataverseConnection" Version="1.1.1" />
+    <PackageReference Include="DataverseConnection" Version="1.2.5" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Text.Json" Version="8.0.5" />

@@ -77,7 +77,7 @@ var settings = new XrmMockupSettings {
 
 The solution multi-targets:
 - `net462` - Uses Microsoft.CrmSdk assemblies
-- `net8.0` - Uses Microsoft.PowerPlatform.Dataverse.Client (define `DATAVERSE_SERVICE_CLIENT`)
+- `net10.0` - Uses Microsoft.PowerPlatform.Dataverse.Client (define `DATAVERSE_SERVICE_CLIENT`)
 
 ## Metadata Generation
 
