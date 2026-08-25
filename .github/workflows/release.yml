@@ -60,12 +60,19 @@ jobs:
         path: ./nupkg
 
     - name: Add packages to release
-      uses: softprops/action-gh-release@v2
       if: github.event_name == 'release'
-      with:
-        files: |
-          ./nupkg/*.nupkg
-          ./nupkg/*.snupkg
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        $assets = @(Get-ChildItem -Path ./nupkg -File | Where-Object { $_.Extension -in '.nupkg', '.snupkg' })
+        if ($assets.Count -eq 0) {
+          Write-Error "No NuGet packages found to upload to the release"
+          exit 1
+        }
+
+        $assetPaths = @($assets | ForEach-Object { $_.FullName })
+        gh release upload "${{ github.event.release.tag_name }}" $assetPaths --clobber
 
     - name: Login to NuGet (OIDC)
       id: nuget-login
